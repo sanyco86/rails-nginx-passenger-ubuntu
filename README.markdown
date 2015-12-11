@@ -157,6 +157,7 @@ GIT
 ---
 
   уставливаем git
+  
     sudo apt-get install git-core
 
 Nginx
