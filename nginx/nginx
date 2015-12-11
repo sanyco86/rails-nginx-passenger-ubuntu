@@ -1,249 +1,217 @@
-rails-nginx-passenger-ubuntu
-============================
+#! /bin/sh
+### BEGIN INIT INFO
+# Provides:          nginx
+# Required-Start:    $remote_fs $syslog
+# Required-Stop:     $remote_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: nginx init.d script for Ubuntu 8.10 and lesser versions.
+# Description:       nginx init.d script for Ubuntu 8.10 and lesser versions.
+### END INIT INFO
+#------------------------------------------------------------------------------
+# nginx - this script, which starts and stops the nginx daemon for ubuntu.
+#
+# description:  Nginx is an HTTP(S) server, HTTP(S) reverse \
+#               proxy and IMAP/POP3 proxy server.  This \
+#		script will manage the initiation of the \
+#		server and it's process state.
+#
+# processname: nginx
+# config:      /usr/local/nginx/conf/nginx.conf
+# pidfile:     /acronymlabs/server/nginx.pid
+# Provides:    nginx
+#
+# Author:  Jason Giedymin
+#          <jason.giedymin AT acronymlabs.com>.
+#
+# Version: 1.0 01-Apr-2009 jason.giedymin AT gmail.com
+# Notes: nginx init.d script for Ubuntu 8.10 and lesser versions.
+#
+#------------------------------------------------------------------------------
+#                               MIT X11 License
+#------------------------------------------------------------------------------
+#
+# Copyright (c) 2009 Jason Giedymin, http://AcronymLabs.com
+#
+# Permission is hereby granted, free of charge, to any person obtaining
+# a copy of this software and associated documentation files (the
+# "Software"), to deal in the Software without restriction, including
+# without limitation the rights to use, copy, modify, merge, publish,
+# distribute, sublicense, and/or sell copies of the Software, and to
+# permit persons to whom the Software is furnished to do so, subject to
+# the following conditions:
+#
+# The above copyright notice and this permission notice shall be
+# included in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+# NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+# LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+# OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+# WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+#------------------------------------------------------------------------------
 
-Установка и настройка production server на Ubuntu 14.04
-RVM Nginx Passenger PostgreSQL Redis SphinxSearch
+#------------------------------------------------------------------------------
+#                               Functions
+#------------------------------------------------------------------------------
+. /lib/lsb/init-functions
 
-Пользователи, rsa-ключи и права доступа
------------------------------------------------------------
-  заходим на сервер под root
-  
-    ssh root@192.168.0.100
-    
-  создаем пользователя deployer
-  
-    sudo adduser deployer
+#------------------------------------------------------------------------------
+#                               Consts
+#------------------------------------------------------------------------------
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+DAEMON=/opt/nginx/sbin/nginx
 
-  открываем конфигурацию управления правами пользователя
-  
-    sudo visudo
+PS="nginx"
+PIDNAME="nginx"				#Lets you do $PS-Master or $PS-Slave
+PIDFILE=$PIDNAME.pid                    #pid file
+PIDSPATH=/opt/nginx/logs
+DESCRIPTION="Nginx Server..."
 
-  найти строчку root ALL=(ALL:ALL) ALL и после нее добавить
-  
-    deployer ALL=(ALL:ALL) ALL
+RUNAS=root				#user to run as
 
-  меняем порт подключения по SSH
-  
-    sudo nano /etc/ssh/sshd_config
+SCRIPT_OK=0				#ala error codes
+SCRIPT_ERROR=1				#ala error codes
+TRUE=1					#boolean
+FALSE=0					#boolean
 
-  найти строчку Port 22 и заменить ее на
-  
-    Port 4321 (или любой другой)
-  
-  перезагружаем SSH
-  
-    sudo reload ssh
+lockfile=/var/lock/subsys/nginx
+NGINX_CONF_FILE="/opt/nginx/conf/nginx.conf"
 
-  завершаем сеанс пользователя root
-  
-    exit
+#------------------------------------------------------------------------------
+#                               Simple Tests
+#------------------------------------------------------------------------------
 
-  заходим на сервер под deployer
-  
-    ssh deployer@192.168.0.100 -p 4321
-  
-  создаем папку ssh
-  
-    mkdir ~/.ssh
-  
-  на локальном компьютере генерируем shh
-  
-    ssh-keygen -t rsa
-  
-  на локальном компьютере отправляем ssh ключ на сервер
-  
-    cat ~/.ssh/id_rsa.pub | ssh -p 4321 deployer@192.168.0.100 'cat >> /home/deployer/.ssh/authorized_keys'
-  
-  на сервере нужно убедиться что authorized_keys создан
-  
-    ls ~/.ssh/
-  
-  завершаем сеанс пользователя deployer
-  
-    exit
-  
-  заходим на сервер под deployer если все хорошо, то пароль не спросит
-  
-    ssh deployer@192.168.0.100 -p 4321
+#test if nginx is a file and executable
+test -x $DAEMON || exit 0
 
-Update and upgrade
-------------------
+# Include nginx defaults if available
+if [ -f /etc/default/nginx ] ; then
+        . /etc/default/nginx
+fi
 
-    sudo apt-get update
-    sudo apt-get upgrade
-    sudo reboot
-    
-  после перезагрузки заходим на сервер под deployer
-    ssh deployer@192.168.0.100 -p 4321
+#set exit condition
+#set -e
 
-Тайм зона
---------------
+#------------------------------------------------------------------------------
+#                               Functions
+#------------------------------------------------------------------------------
 
-  комфигурируем тайм зону
-  
-    sudo dpkg-reconfigure tzdata
-  
-  выбираем регион
-  
-    Europe
-  
-  выбираем город
-  
-    Kiev
-  
-  убелиться что таймзона изменилась
-  
-    date
+setFilePerms(){
 
-Устанавливка RVM
-------------------------
+        if [ -f $PIDSPATH/$PIDFILE ]; then
+                chmod -f 400 $PIDSPATH/$PIDFILE
+        fi
+}
 
-  устанавливаем curl
-    
-    sudo apt-get install curl
-  
-  устанавливаем RVM
-    
-    curl -L https://get.rvm.io | sudo bash -s stable
-  
-  загружаем RVM в текущую сесию
-    
-    source /etc/profile.d/rvm.sh
+configtest() {
+	$DAEMON -t -c $NGINX_CONF_FILE
+}
 
-  перезайти на сервер под deployer
-  
-	exit
-	ssh deployer@192.168.0.100 -p 4321
+getPSCount() {
+	return `pgrep -f $PS | wc -l`
+}
+
+isRunning(){
+	pidof_daemon
+	PID=$?
+
+	if [ $PID -gt 0 ]; then
+		return 1
+        else
+                return 0
+        fi
+}
+
+status(){
+	isRunning
+	isAlive=$?
+
+	if [ "${isAlive}" -eq $TRUE ]; then
+                echo "$PIDNAME found running with processes:  `pidof $PS`"
+        else
+                echo "$PIDNAME is NOT running."
+        fi
+
+
+}
+
+removePIDFile(){
+	if [ -f $PIDSPATH/PIDFILE ]; then
+        	rm -f $PIDSPATH/$PIDFILE
+        fi
+}
+
+start() {
+        log_daemon_msg "Starting $DESCRIPTION"
 	
-  устанавливаем пакеты нужны для установки RVM
-    
-	rvm requirements
+	isRunning
+	isAlive=$?
 	
-	или
-    
-	rvmsudo /usr/bin/apt-get install build-essential openssl libreadline6 libreadline6-dev curl git-core zlib1g zlib1g-dev libssl-dev libyaml-dev libsqlite3-dev sqlite3 libxml2-dev libxslt-dev autoconf libc6-dev ncurses-dev automake libtool bison subversion
-   
-  устанавливаем ruby
-    
-    rvm install 2.2.3
-  
-  указываем что эта версия ruby будет использоваться по умолчанию
-    
-    rvm use 2.2.3 --default
-  
-  проверяем версию ruby
-    
-    ruby -v
+        if [ "${isAlive}" -eq $TRUE ]; then
+                log_end_msg $SCRIPT_ERROR
+        else
+                start-stop-daemon --start --quiet --chuid $RUNAS --pidfile $PIDSPATH/$PIDFILE --exec $DAEMON
+                setFilePerms
+		log_end_msg $SCRIPT_OK
+        fi
+}
+
+stop() {
+	log_daemon_msg "Stopping $DESCRIPTION"
 	
-  устанавливаем bundler
-  
-	gem install bundler
+	isRunning
+	isAlive=$?
+        if [ "${isAlive}" -eq $TRUE ]; then
+                start-stop-daemon --stop --quiet --pidfile $PIDSPATH/$PIDFILE
 
-Устанавливка PostgreSQL
--------------------------------
+		removePIDFile
 
-  устанавливаем PostgreSQL
-  
-    sudo apt-get install postgresql postgresql-contrib postgresql-server-dev-9.3
-  
-  устанавливаем пароль для postgres
-  
-    sudo -u postgres psql
-  
-    alter user postgres with password 'qwerty';
-    \q
-      
-GIT
----
+                log_end_msg $SCRIPT_OK
+        else
+                log_end_msg $SCRIPT_ERROR
+        fi
+}
 
-  уставливаем git
-    sudo apt-get install git-core
+reload() {
+	configtest || return $?
 
-Nginx
------
+	log_daemon_msg "Reloading (via HUP) $DESCRIPTION"
 
-  устанавливаем passenger + nginx
-  
-    gem install passenger
-  
-    sudo apt-get install libcurl4-openssl-dev
-  
-    rvmsudo passenger-install-nginx-module
-    
-    1. жмем просто Enter
-	2. Стрелочками переходим на Python снмаем галочку нажатием Space, убедились что выделен только Ruby и жмем Enter
-	3. Жмем 1 и далее Enter
-	4. Жмем Enter
-	5. Завершаем установку Жмем Enter
-	
-  открываем конфигурационный файл nginx
-  
-    sudo nano /opt/nginx/conf/nginx.conf
-  
-  редактируем блок server
-  
-      gzip on;
+        isRunning
+        if [ $? -eq $TRUE ]; then
+		`killall -HUP $PS` #to be safe
 
-      server {
-        listen 80;
-        server_name 192.168.0.100;
-        root /home/deployer/qna/current/public;
-        passenger_enabled on;
+                log_end_msg $SCRIPT_OK
+        else
+                log_end_msg $SCRIPT_ERROR
+        fi
+}
 
-        location ^~ /assets/ {
-          gzip_static on;
-          expires max;
-          add_header Cache-Control public;
-        }
-      }
+terminate() {
+        log_daemon_msg "Force terminating (via KILL) $DESCRIPTION"
+        
+	PIDS=`pidof $PS` || true
 
-  загружаем скрипт управления nginx
-  
-    git clone https://github.com/sanyco86/rails-nginx-passenger-ubuntu.git
-  
-  копируем скрипт
-  
-    sudo cp rails-nginx-passenger-ubuntu/nginx/nginx /etc/init.d/
-  
-  даем скрипту права на запуск 
-  
-    chmod +x /etc/init.d/nginx
-  
-  удаляем загруженный скрипт
-  
-    rm -rf rails-nginx-passenger-ubuntu/
-  
-  запускаем nginx
-  
-    sudo /etc/init.d/nginx start
-  
-  проверяем на локальном компьютере что сервер доступен
-  
-    http://192.168.0.100
+	[ -e $PIDSPATH/$PIDFILE ] && PIDS2=`cat $PIDSPATH/$PIDFILE`
 
-Redis
------
+	for i in $PIDS; do
+		if [ "$i" = "$PIDS2" ]; then
+	        	kill $i
+			removePIDFile
+		fi
+	done
 
-  устанавливаем redis для sidekiq
-  
-    sudo apt-get install redis-server
-  
-  конфигурируем redis
-  
-    sudo cp /etc/redis/redis.conf /etc/redis/redis.conf.default
-  
-  перезапускаем redis
-  
-    sudo service redis-server restart
+	log_end_msg $SCRIPT_OK
 
-Sphinx
-------
+}
 
-  устанавливаем sphinx
-    
-    sudo apt-get install sphinxsearch
-    
-    PIDSPATH/$PIDFILE ] && PIDS2=`cat $PIDSPATH/$PIDFILE`
+pidof_daemon() {
+    PIDS=`pidof $PS` || true
+
+    [ -e $PIDSPATH/$PIDFILE ] && PIDS2=`cat $PIDSPATH/$PIDFILE`
 
     for i in $PIDS; do
         if [ "$i" = "$PIDS2" ]; then
