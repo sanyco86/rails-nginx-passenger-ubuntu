@@ -137,7 +137,7 @@ Update and upgrade
 	
   устанавливаем bundler
   
-	gem install bundler
+    gem install bundler
 
 Устанавливка PostgreSQL
 -------------------------------
@@ -207,7 +207,7 @@ Nginx
   
   даем скрипту права на запуск 
   
-    chmod +x /etc/init.d/nginx
+    sudo chmod +x /etc/init.d/nginx
   
   удаляем загруженный скрипт
   
