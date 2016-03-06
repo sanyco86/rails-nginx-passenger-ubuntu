@@ -110,12 +110,7 @@ Update and upgrade
   
   загружаем RVM в текущую сесию
     
-    source /etc/profile.d/rvm.sh
-
-  перезайти на сервер под deployer
-  
-	exit
-	ssh deployer@192.168.0.100 -p 4321
+    source /home/deployer/.rvm/scripts/rvm
 	
   устанавливаем пакеты нужны для установки RVM
     
