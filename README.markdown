@@ -46,9 +46,9 @@ RVM Nginx Passenger PostgreSQL Redis SphinxSearch
   
     ssh-keygen -t rsa
 
-  добавляем ключ на сервер вручную (2) или с помощью утилиты (1)
+  добавляем ключ на сервер вручную (2) или с помощью утилиты ssh-copy-id (1)
 
-  (1) ставим ssh-copy-id. Команда для MacOS:
+  (1) В Ubuntu ssh-copy-id стоит по умолчанию. В MacOS ставим командой:
 
     brew install ssh-copy-id
 
