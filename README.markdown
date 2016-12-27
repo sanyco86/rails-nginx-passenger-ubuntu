@@ -14,13 +14,9 @@ RVM Nginx Passenger PostgreSQL Redis SphinxSearch
   
     sudo adduser deployer
 
-  открываем конфигурацию управления правами пользователя
+  добавляем пользователя deployer в группу sudo
   
-    sudo visudo
-
-  найти строчку root ALL=(ALL:ALL) ALL и после нее добавить
-  
-    deployer ALL=(ALL:ALL) ALL
+    sudo usermod -a -G sudo deployer
 
   меняем порт подключения по SSH
   
@@ -37,18 +33,36 @@ RVM Nginx Passenger PostgreSQL Redis SphinxSearch
   завершаем сеанс пользователя root
   
     exit
-
+  
   заходим на сервер под deployer
   
     ssh deployer@192.168.0.100 -p 4321
   
+  логин должен пройти успешно, выходим
+
+    exit
+
+  на локальном компьютере генерируем ssh key
+  
+    ssh-keygen -t rsa
+
+  добавляем ключ на сервер вручную (2) или с помощью утилиты ssh-copy-id (1)
+
+  (1) В Ubuntu ssh-copy-id стоит по умолчанию. В MacOS ставим командой:
+
+    brew install ssh-copy-id
+
+  копируем ключ
+    
+    ssh-copy-id deployer@<ip-addr-server> -p <your_ssh_port>
+
+  (2) вариант вручную. Заходим на сервер
+
+    ssh deployer@192.168.0.100 -p 4321
+
   создаем папку ssh
   
     mkdir ~/.ssh
-  
-  на локальном компьютере генерируем shh
-  
-    ssh-keygen -t rsa
   
   на локальном компьютере отправляем ssh ключ на сервер
   
@@ -58,7 +72,7 @@ RVM Nginx Passenger PostgreSQL Redis SphinxSearch
   
     ls ~/.ssh/
   
-  завершаем сеанс пользователя deployer
+  завершаем сеанс пользователя deployer (конец варианта (2))
   
     exit
   
