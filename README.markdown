@@ -28,7 +28,7 @@ RVM Nginx Passenger PostgreSQL Redis SphinxSearch
   
   перезагружаем SSH
   
-    sudo reload ssh
+    sudo systemctl restart ssh.service
 
   завершаем сеанс пользователя root
   
