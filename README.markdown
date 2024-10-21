@@ -118,7 +118,7 @@ Update and upgrade
   
   устанавливаем RVM
     
-    gpg --keyserver hkp://keys.gnupg.net --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3
+    gpg --keyserver hkp://keyserver.ubuntu.com --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3 7D2BAF1CF37B13E2069D6956105BD0E739499BDB
 
     \curl -sSL https://get.rvm.io | bash -s stable
   
@@ -135,8 +135,9 @@ Update and upgrade
 	rvmsudo /usr/bin/apt-get install build-essential openssl libreadline6 libreadline6-dev curl git-core zlib1g zlib1g-dev libssl-dev libyaml-dev libsqlite3-dev sqlite3 libxml2-dev libxslt-dev autoconf libc6-dev ncurses-dev automake libtool bison subversion
    
   устанавливаем ruby
-    
-    rvm install 2.2.3
+
+    rvm pkg install openssl
+    rvm install 2.6.3 --with-openssl-dir=$HOME/.rvm/usr
   
   указываем что эта версия ruby будет использоваться по умолчанию
     
